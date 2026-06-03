@@ -83,9 +83,10 @@
             border: 1px solid #333;
         }
 
+        /* 移除隱藏設定，改為有科技感的發光輸入框 */
         .visible-textarea {
             width: 100%;
-            height: 250px;
+            height: 200px;
             background: rgba(0, 0, 0, 0.8);
             border: 2px solid #00F0FF;
             color: #00F0FF;
@@ -119,12 +120,11 @@
 <body>
     <div id="stars"></div>
     
-    <!-- 加入防呆底層文字，如果 React 引擎成功啟動，這段文字會瞬間被覆蓋。如果一直看到這個畫面，代表瀏覽器阻擋了程式碼。 -->
+    <!-- 加入防呆底層文字 -->
     <div id="root">
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; color: #FFE81F; font-family: sans-serif;">
             <h2 style="font-size: 2rem; margin-bottom: 1rem;">系統啟動中...</h2>
             <p style="color: #888;">如果持續停留在此畫面，請按 <strong style="color: #fff;">Ctrl + F5</strong> 強制重新整理清除舊快取。</p>
-            <p style="color: #888;">或是您的網路環境可能阻擋了必要的腳本載入。</p>
         </div>
     </div>
 
@@ -138,7 +138,7 @@
             },
             high: {
                 title: "高年級 (400字)",
-                content: "很久很久以前，在一個遙遠的銀河系裡，和平的共和國正面臨著前所未有的巨大危機。黑暗勢力的邪惡帝國正在四處擴張，他們建造了一座名為「死星」的超級太空站，企圖用恐懼來統治所有的星系！反抗軍的領袖是一位勇敢的公主，她秘密地把死星的設計圖藏在一個小巧的機器人身上，並對著它說：「這份圖紙是我們最後的希望，你一定要把它交給絕地武士！」機器人發出嗶嗶啵啵的聲音，似乎在說：「交給我吧！」隨後便搭乘逃生艙降落在一顆荒涼的沙漠星球上。在這裡，機器人遇到了一位熱愛冒險的年輕農場男孩。男孩看著機器人投射出的立體影像，驚訝地問：「這位美麗的公主是誰？她好像遇上了很大的麻煩！」為了解開這個謎團，男孩找到了一位隱居多年的神秘老人。老人看著男孩，語重心長地說：「這就是你的命運，年輕人。原力非常強大，它會指引你前進的道路。」於是，男孩、老人、兩位幽默的走私客以及兩個機器人，組成了一支奇妙的隊伍。他們展開了一場驚心動魄的星際旅行。在旅途中，他們不僅要躲避帝國軍隊的猛烈追擊，還要學會如何運用神秘的原力。面對強大的黑暗武士，男孩勇敢地拔出閃耀著藍色光芒的光劍，大喊：「我絕對不會向黑暗低頭！」這場正義與邪惡的對決，誰能獲得勝利呢？願原力與你們同在。"
+                content: "很久很久以前，在一個遙遠的銀河系裡，和平的共和國正面臨著前所未有的巨大危機。黑暗勢力的邪惡帝國正在四處擴張，他們建造了一座名為「死星」的超級太空站，企圖用恐懼來統治所有的星系！反抗軍的領袖是一位勇敢的公主，她秘密地把死星的設計圖藏在一個小巧的機器人身上，並對著它說：「這份圖紙是我們最後的希望，你一定要把它交給絕地武士！」機器人發出嗶嗶啵啵的聲音，似乎在說：「交給我吧！」隨後便搭乘逃生艙降落在一顆荒涼的沙漠星球上。在這裡，機器人遇到了一位熱愛冒險的年輕農場男孩。男孩看著機器人投射出的立體影像，驚訝地問：「這位美麗的公主是誰？她好像遇上了很大的麻煩！」為了解開這個謎團，男孩找到了一位隱居多年的神秘老人。老人看著男孩，語重心長地說：「這就是你的命運，年輕人。原力非常強大，它會指引ंपूर्前進的道路。」於是，男孩、老人、兩位幽默的走私客以及兩個機器人，組成了一支奇妙的隊伍。他們展開了一場驚心動魄的星際旅行。在旅途中，他們不僅要躲避帝國軍隊的猛烈追擊，還要學會如何運用神秘的原力。面對強大的黑暗武士，男孩勇敢地拔出閃耀著藍色光芒的光劍，大喊：「我絕對不會向黑暗低頭！」這場正義與邪惡的對決，誰能獲得勝利呢？願原力與你們同在。"
             }
         };
 
@@ -198,7 +198,7 @@
 
             // 遊戲中狀態
             const [userInput, setUserInput] = useState('');
-            const [validatedInput, setValidatedInput] = useState('');
+            const [validatedInput, setValidatedInput] = useState(''); // 新增：按下 Enter 後才送出的確認字串
             const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
             const [stats, setStats] = useState({ wpm: 0, accuracy: 0, correct: 0 });
 
@@ -255,6 +255,7 @@
                                 setView('playing');
                                 setTimeLeft(GAME_DURATION);
                                 setUserInput('');
+                                setValidatedInput('');
                             } else if (data.status === 'finished' && (view === 'playing' || view === 'room')) {
                                 setView('results');
                             }
@@ -399,7 +400,7 @@
                 
                 const syncInterval = setInterval(() => {
                     playerRef.update({
-                        progress: validatedInput.length,
+                        progress: validatedInput.length, // 同步進度改為看已經送出檢查的字串長度
                         correct: stats.correct,
                         wpm: stats.wpm,
                         accuracy: stats.accuracy,
@@ -428,18 +429,29 @@
                 return () => clearInterval(timer);
             }, [view]);
 
+            // 處理打字輸入，這裡純粹只更新畫面上輸入框裡面的字，不觸發對錯判定
             const handleTyping = (e) => {
                 if (view !== 'playing' || !roomData) return;
                 setUserInput(e.target.value);
             };
 
+            // 處理按下 Enter 的時機
             const handleKeyDown = (e) => {
+                if (view !== 'playing' || !roomData) return;
+
+                // 【核心機制】：判斷是否處於中文輸入法的「組字狀態」（底下有虛線）
+                // 學生在選字時按 Enter 不會觸發檢查，只有字確實打出來後按 Enter 才會送出檢查
+                if (e.nativeEvent.isComposing || e.keyCode === 229) {
+                    return; 
+                }
+
                 if (e.key === 'Enter') {
-                    e.preventDefault(); // 防止游標換行
-                    validateText(userInput);
+                    e.preventDefault(); // 防止游標在輸入框裡換行
+                    validateText(e.target.value); 
                 }
             };
 
+            // 真正的對錯判定機制，由按下 Enter 後呼叫
             const validateText = (rawText) => {
                 if (view !== 'playing' || !roomData) return;
                 
@@ -449,8 +461,8 @@
                     val = val.substring(0, roomData.text.length);
                 }
 
-                setUserInput(val);
-                setValidatedInput(val);
+                setUserInput(val); // 放回轉換後的字串
+                setValidatedInput(val); // 記錄判定用的字串，這會觸發上方文章區的顏色改變
 
                 const targetText = roomData.text;
                 let correctCount = 0;
@@ -474,6 +486,7 @@
                     accuracy: currentAcc
                 });
 
+                // 如果確認送出的字數已經等於總字數，自動結束測驗
                 if (val.length === targetText.length) {
                     const playerRef = db.collection('artifacts').doc(currentAppId).collection('public').doc('data').collection('SwTypingPlayers').doc(user.uid);
                     playerRef.update({
@@ -619,14 +632,16 @@
 
                         <div className="flex flex-col md:flex-row gap-6 relative">
                             <div className="w-full md:w-3/4 flex flex-col gap-4">
-                                {/* Target Text Display */}
+                                
+                                {/* Target Text Display (上方作戰目標) */}
                                 <div className="relative">
                                     <div className="absolute top-0 left-0 bg-yellow-400 text-black text-xs font-bold px-3 py-1 rounded-br-lg rounded-tl-lg z-10 shadow-md">
-                                        作戰目標 (比對結果)
+                                        作戰目標 (對錯判定區)
                                     </div>
                                     <div className="typing-container p-6 pt-10 rounded-lg text-2xl leading-loose font-medium min-h-[30vh]">
                                         {targetText.split('').map((char, index) => {
                                             let className = 'char-untyped';
+                                            // 顏色變化根據【送出檢查後】的 validatedInput 來決定
                                             if (index < validatedInput.length) {
                                                 className = validatedInput[index] === char ? 'char-correct' : 'char-incorrect';
                                             }
@@ -635,12 +650,14 @@
                                     </div>
                                 </div>
                                 
-                                {/* Visible User Input */}
+                                {/* Visible User Input (下方學生實際打字的終端機) */}
                                 {role === 'student' && (
                                     <div className="relative flex flex-col gap-2">
                                         <div className="flex justify-between items-end mb-1">
                                             <label className="text-cyan-400 font-bold text-lg">你的輸入終端機：</label>
-                                            <span className="text-yellow-400 text-sm animate-pulse font-bold bg-black bg-opacity-50 px-2 py-1 rounded border border-yellow-400">👉 輸入告一段落後，請按 Enter 鍵送出檢查！</span>
+                                            <span className="text-yellow-400 text-sm animate-pulse font-bold bg-black bg-opacity-50 px-2 py-1 rounded border border-yellow-400">
+                                                👉 輸入告一段落後，請按 Enter 鍵送出檢查！
+                                            </span>
                                         </div>
                                         <textarea
                                             className="visible-textarea"
@@ -658,6 +675,7 @@
                                 )}
                             </div>
 
+                            {/* Live Leaderboard (Sidebar) */}
                             <div className="w-full md:w-1/4 bg-gray-900 border border-gray-700 rounded-lg p-4 max-h-[60vh] overflow-y-auto">
                                 <h3 className="text-xl text-yellow-400 mb-3 border-b border-gray-700 pb-2 flex items-center justify-between">
                                     <span>即時戰況</span><span className="text-xs text-gray-500">Live</span>
