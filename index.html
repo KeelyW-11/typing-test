@@ -133,7 +133,6 @@
 
         const GAME_DURATION = 300; // 5分鐘 = 300秒
 
-        // ！！！請將這裡替換為您的 Google Apps Script 網頁應用程式 URL ！！！
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxKxwqhiPm0v4xAtTju0sh01yjf3b4rxjQz1cnnnwxPVKm8BXRMPKtDiXAkLruawYo_3A/exec"; 
 
         // --- Firebase Configuration & Initialization ---
@@ -142,13 +141,13 @@
         const initFirebase = () => {
             if (!firebase.apps.length) {
                 const firebaseConfig = {
-  apiKey: "AIzaSyBYY2Be5yo8C-Ml1ADrFBkV4TuR05uZnR4",
-  authDomain: "typing-test-374e8.firebaseapp.com",
-  projectId: "typing-test-374e8",
-  storageBucket: "typing-test-374e8.firebasestorage.app",
-  messagingSenderId: "83605792554",
-  appId: "1:83605792554:web:250e0396e8be8ce834e053"
-};
+                  apiKey: "AIzaSyBYY2Be5yo8C-Ml1ADrFBkV4TuR05uZnR4",
+                  authDomain: "typing-test-374e8.firebaseapp.com",
+                  projectId: "typing-test-374e8",
+                  storageBucket: "typing-test-374e8.firebasestorage.app",
+                  messagingSenderId: "83605792554",
+                  appId: "1:83605792554:web:250e0396e8be8ce834e053"
+                };
                 firebase.initializeApp(firebaseConfig);
             }
             db = firebase.firestore();
@@ -186,7 +185,7 @@
             const [playerName, setPlayerName] = useState('');
             const [errorMessage, setErrorMessage] = useState('');
 
-            <!-- ... existing code ... -->
+            // 遊戲中狀態
             const [userInput, setUserInput] = useState('');
             const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
             const [stats, setStats] = useState({ wpm: 0, accuracy: 0, correct: 0 });
@@ -226,31 +225,11 @@
             }, []);
 
             // 監聽房間資料與所有玩家
-<!-- ... existing code ... -->
-            }
+            useEffect(() => {
+                if (!user || !roomId) return;
 
-            // 主渲染邏輯
-            if (view === 'loading') {
-                return (
-                    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-                        <div className="text-yellow-400 text-2xl font-mono animate-pulse mb-4">載入系統中...</div>
-                        {errorMessage && (
-                            <div className="bg-red-900 border border-red-500 text-white p-6 rounded-lg max-w-lg shadow-[0_0_15px_#ef4444]">
-                                <h3 className="font-bold mb-2 text-xl">⚠️ Firebase 連線被阻擋或設定錯誤</h3>
-                                <p className="mb-4 font-mono text-sm text-red-300">{errorMessage}</p>
-                                <ul className="list-disc pl-5 text-gray-200 text-sm space-y-2">
-                                    <li>請確認程式碼內的 <b>firebaseConfig</b> 已替換為您專案的真實金鑰。</li>
-                                    <li>請確認 Firebase 的 <b>Authentication -> 匿名登入</b> 已啟用。</li>
-                                    <li>請確認 <b>keelyw-11.github.io</b> 已加入 Firebase 的授權網域清單 (見下方說明)。</li>
-                                </ul>
-                            </div>
-                        )}
-                    </div>
-                );
-            }
-            if (view === 'home') return renderHome();
-            if (view === 'teacher_setup') return renderTeacherSetup();
-<!-- ... existing code ... -->
+                const roomsRef = db.collection('artifacts').doc(currentAppId).collection('public').doc('data').collection('SwTypingRooms');
+                const playersRef = db.collection('artifacts').doc(currentAppId).collection('public').doc('data').collection('SwTypingPlayers');
 
                 // 監聽房間
                 const unsubscribeRoom = roomsRef.doc(roomId).onSnapshot(
@@ -277,7 +256,7 @@
                     (err) => console.error(err)
                 );
 
-                // 監聽所有玩家，並在前端過濾出目前房間的玩家 (符合規則2: No complex queries)
+                // 監聽所有玩家
                 const unsubscribePlayers = playersRef.onSnapshot(
                     (snapshot) => {
                         const allPlayers = snapshot.docs.map(d => d.data());
@@ -296,7 +275,6 @@
             }, [user, roomId, view]);
 
             // --- 動作處理 ---
-
             const createRoom = async (difficulty) => {
                 const code = generateRoomCode();
                 const roomRef = db.collection('artifacts').doc(currentAppId).collection('public').doc('data').collection('SwTypingRooms').doc(code);
@@ -306,12 +284,12 @@
                     teacherId: user.uid,
                     difficulty: difficulty,
                     text: TEXTS[difficulty].content,
-                    status: 'waiting', // waiting, playing, finished
+                    status: 'waiting',
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
                 setRoomId(code);
-                setRoomData({ id: code, status: 'waiting', text: TEXTS[difficulty].content });
+                setRoomData({ id: code, status: 'waiting', text: TEXTS[difficulty].content, difficulty: difficulty });
                 setView('room');
             };
 
@@ -343,7 +321,6 @@
                     return;
                 }
 
-                // 新增玩家資料
                 const playerRef = db.collection('artifacts').doc(currentAppId).collection('public').doc('data').collection('SwTypingPlayers').doc(user.uid);
                 await playerRef.set({
                     userId: user.uid,
@@ -375,24 +352,17 @@
                 }
             };
 
-            // 上傳成績至 Google 試算表的函數
             const uploadToSheet = async () => {
-                if (!APPS_SCRIPT_URL) {
-                    alert("請先在程式碼中設定 APPS_SCRIPT_URL！");
-                    return;
-                }
-
                 try {
                     const payload = players.map(p => ({
                         roomId: p.roomId,
-                        difficulty: roomData.difficulty === 'mid' ? '中年級' : '高年級',
+                        difficulty: roomData?.difficulty === 'mid' ? '中年級' : '高年級',
                         name: p.name,
                         wpm: p.wpm,
                         accuracy: p.accuracy,
                         progress: roomData ? Math.round((p.progress / roomData.text.length) * 100) : 0
                     }));
 
-                    // 使用 no-cors 模式與 text/plain，避免瀏覽器的跨網域 (CORS) 阻擋問題
                     await fetch(APPS_SCRIPT_URL, {
                         method: 'POST',
                         mode: 'no-cors',
@@ -410,11 +380,8 @@
             };
 
             // --- 遊戲邏輯 ---
-
-            // 定期上傳進度
             useEffect(() => {
                 if (view !== 'playing' || role !== 'student' || !roomData) return;
-
                 const playerRef = db.collection('artifacts').doc(currentAppId).collection('public').doc('data').collection('SwTypingPlayers').doc(user.uid);
                 
                 const syncInterval = setInterval(() => {
@@ -424,13 +391,12 @@
                         wpm: stats.wpm,
                         accuracy: stats.accuracy,
                         status: 'playing'
-                    }).catch(err => console.log("Sync error (might be offline)", err));
-                }, 2000); // 每2秒同步一次，降低寫入頻率
+                    }).catch(err => console.log("Sync error", err));
+                }, 2000);
 
                 return () => clearInterval(syncInterval);
             }, [view, userInput, stats, role]);
 
-            // 本地計時器與統計更新
             useEffect(() => {
                 if (view !== 'playing') return;
 
@@ -438,7 +404,7 @@
                     setTimeLeft(prev => {
                         if (prev <= 1) {
                             clearInterval(timer);
-                            if (role === 'teacher') endGame(); // 時間到由老師觸發結束，或學生自動結束本地狀態
+                            if (role === 'teacher') endGame();
                             if (role === 'student') setView('results');
                             return 0;
                         }
@@ -449,22 +415,17 @@
                 return () => clearInterval(timer);
             }, [view]);
 
-            // 處理打字輸入
             const handleTyping = (e) => {
                 if (view !== 'playing' || !roomData) return;
-                
-                // 防作弊與自動轉換標點
                 let val = e.target.value;
                 val = convertToFullWidthPunctuation(val);
                 
-                // 限制不能超過文章長度
                 if (val.length > roomData.text.length) {
                     val = val.substring(0, roomData.text.length);
                 }
 
                 setUserInput(val);
 
-                // 計算成績
                 const targetText = roomData.text;
                 let correctCount = 0;
                 for (let i = 0; i < val.length; i++) {
@@ -474,7 +435,6 @@
                 const elapsedSeconds = GAME_DURATION - timeLeft;
                 const elapsedMinutes = elapsedSeconds / 60;
                 
-                // 為了避免一開始除以0或數字爆衝，前5秒不計算或給預設值
                 let currentWpm = 0;
                 if (elapsedSeconds > 2) {
                     currentWpm = Math.round(correctCount / elapsedMinutes);
@@ -488,7 +448,6 @@
                     accuracy: currentAcc
                 });
 
-                // 若打完文章，直接結束個人的遊戲
                 if (val.length === targetText.length) {
                     const playerRef = db.collection('artifacts').doc(currentAppId).collection('public').doc('data').collection('SwTypingPlayers').doc(user.uid);
                     playerRef.update({
@@ -503,10 +462,8 @@
             };
 
             const copyJoinLink = () => {
-                // 由於在 Canvas 中 URL 可能不包含原始 origin，我們組裝一個假定的或目前的 URL
                 const url = new URL(window.location.href);
                 url.searchParams.set('room', roomId);
-                // 使用傳統方式複製，確保在 iframe 也能運作
                 const tempInput = document.createElement('input');
                 tempInput.value = url.toString();
                 document.body.appendChild(tempInput);
@@ -517,7 +474,6 @@
             };
 
             // --- UI 組件 ---
-
             const renderHome = () => (
                 <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
                     <h1 className="text-5xl md:text-7xl font-black mb-12 sw-title tracking-widest">
@@ -528,15 +484,13 @@
                             onClick={() => { setRole('teacher'); setView('teacher_setup'); }}
                             className="sw-btn text-xl py-4 px-8 rounded flex items-center justify-center space-x-3"
                         >
-                            <span>👑</span>
-                            <span>我是指揮官 (老師)</span>
+                            <span>👑</span><span>我是指揮官 (老師)</span>
                         </button>
                         <button 
                             onClick={() => { setRole('student'); setView('student_join'); }}
                             className="sw-btn text-xl py-4 px-8 rounded flex items-center justify-center space-x-3"
                         >
-                            <span>🚀</span>
-                            <span>我是飛行員 (學生)</span>
+                            <span>🚀</span><span>我是飛行員 (學生)</span>
                         </button>
                     </div>
                 </div>
@@ -546,7 +500,6 @@
                 <div className="flex flex-col items-center justify-center min-h-screen p-4">
                     <div className="bg-gray-900 bg-opacity-80 p-8 border-2 border-yellow-400 rounded-lg max-w-lg w-full">
                         <h2 className="text-3xl font-bold mb-6 sw-title text-center">建立競賽基地</h2>
-                        
                         <div className="mb-8">
                             <label className="block text-gray-300 mb-2">選擇作戰難易度：</label>
                             <select id="diff-select" className="w-full bg-black border border-yellow-400 text-yellow-400 p-3 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400">
@@ -554,20 +507,9 @@
                                 <option value="high">高年級組 (約400字，進階標點)</option>
                             </select>
                         </div>
-
                         <div className="flex space-x-4">
-                            <button 
-                                onClick={() => setView('home')}
-                                className="w-1/3 border border-gray-500 text-gray-400 py-3 rounded hover:bg-gray-800 transition"
-                            >
-                                返回
-                            </button>
-                            <button 
-                                onClick={() => createRoom(document.getElementById('diff-select').value)}
-                                className="w-2/3 bg-yellow-400 text-black font-bold py-3 rounded hover:bg-yellow-300 transition shadow-[0_0_15px_#FFE81F]"
-                            >
-                                產生競賽連結
-                            </button>
+                            <button onClick={() => setView('home')} className="w-1/3 border border-gray-500 text-gray-400 py-3 rounded hover:bg-gray-800 transition">返回</button>
+                            <button onClick={() => createRoom(document.getElementById('diff-select').value)} className="w-2/3 bg-yellow-400 text-black font-bold py-3 rounded hover:bg-yellow-300 transition shadow-[0_0_15px_#FFE81F]">產生競賽連結</button>
                         </div>
                     </div>
                 </div>
@@ -577,48 +519,18 @@
                 <div className="flex flex-col items-center justify-center min-h-screen p-4">
                     <form onSubmit={joinRoom} className="bg-gray-900 bg-opacity-80 p-8 border-2 border-cyan-400 rounded-lg max-w-lg w-full saber-blue">
                         <h2 className="text-3xl font-bold mb-6 text-cyan-400 text-center tracking-widest text-shadow-cyan">加入艦隊</h2>
-                        
                         {errorMessage && <div className="bg-red-900 text-red-200 p-3 rounded mb-4 text-center">{errorMessage}</div>}
-
                         <div className="mb-4">
                             <label className="block text-gray-300 mb-2">你的星際代號 (姓名)：</label>
-                            <input 
-                                type="text" 
-                                value={playerName}
-                                onChange={(e) => setPlayerName(e.target.value)}
-                                className="w-full bg-black border border-cyan-400 text-cyan-400 p-3 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                                placeholder="例如：路克"
-                                required
-                            />
+                            <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black border border-cyan-400 text-cyan-400 p-3 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="例如：路克" required />
                         </div>
-
                         <div className="mb-8">
                             <label className="block text-gray-300 mb-2">任務代碼：</label>
-                            <input 
-                                type="text" 
-                                value={roomId}
-                                onChange={(e) => setRoomId(e.target.value.toUpperCase())}
-                                className="w-full bg-black border border-cyan-400 text-cyan-400 p-3 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 tracking-widest font-mono text-center text-xl"
-                                placeholder="輸入6碼代號"
-                                maxLength="6"
-                                required
-                            />
+                            <input type="text" value={roomId} onChange={(e) => setRoomId(e.target.value.toUpperCase())} className="w-full bg-black border border-cyan-400 text-cyan-400 p-3 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 tracking-widest font-mono text-center text-xl" placeholder="輸入6碼代號" maxLength="6" required />
                         </div>
-
                         <div className="flex space-x-4">
-                            <button 
-                                type="button"
-                                onClick={() => setView('home')}
-                                className="w-1/3 border border-gray-500 text-gray-400 py-3 rounded hover:bg-gray-800 transition"
-                            >
-                                返回
-                            </button>
-                            <button 
-                                type="submit"
-                                className="w-2/3 bg-cyan-400 text-black font-bold py-3 rounded hover:bg-cyan-300 transition shadow-[0_0_15px_#00F0FF]"
-                            >
-                                登艦準備
-                            </button>
+                            <button type="button" onClick={() => setView('home')} className="w-1/3 border border-gray-500 text-gray-400 py-3 rounded hover:bg-gray-800 transition">返回</button>
+                            <button type="submit" className="w-2/3 bg-cyan-400 text-black font-bold py-3 rounded hover:bg-cyan-300 transition shadow-[0_0_15px_#00F0FF]">登艦準備</button>
                         </div>
                     </form>
                 </div>
@@ -628,24 +540,17 @@
                 <div className="flex flex-col items-center min-h-screen p-4 pt-12">
                     <h2 className="text-4xl font-bold mb-2 sw-title">指揮中心</h2>
                     <p className="text-xl text-gray-400 mb-8">任務代碼：<span className="text-white font-mono bg-gray-800 px-3 py-1 rounded select-all">{roomId}</span></p>
-
                     {role === 'teacher' && (
                         <div className="mb-8 space-x-4 flex">
-                            <button onClick={copyJoinLink} className="sw-btn px-6 py-2 rounded">
-                                📋 複製邀請連結
-                            </button>
-                            <button onClick={startGame} className="bg-yellow-400 text-black font-bold px-8 py-2 rounded hover:bg-yellow-300 shadow-[0_0_15px_#FFE81F]">
-                                ⚔️ 全軍出擊 (開始遊戲)
-                            </button>
+                            <button onClick={copyJoinLink} className="sw-btn px-6 py-2 rounded">📋 複製邀請連結</button>
+                            <button onClick={startGame} className="bg-yellow-400 text-black font-bold px-8 py-2 rounded hover:bg-yellow-300 shadow-[0_0_15px_#FFE81F]">⚔️ 全軍出擊 (開始遊戲)</button>
                         </div>
                     )}
-                    
                     {role === 'student' && (
                         <div className="mb-8 text-cyan-400 text-xl animate-pulse saber-blue p-4 rounded-lg">
                             等待指揮官發布「開始」指令... 請保持連線。
                         </div>
                     )}
-
                     <div className="w-full max-w-4xl bg-gray-900 bg-opacity-70 border border-gray-700 rounded-lg p-6">
                         <h3 className="text-2xl text-yellow-400 mb-4 border-b border-gray-700 pb-2">已登艦成員 ({players.length}/100)</h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -664,59 +569,33 @@
             const renderPlaying = () => {
                 if (!roomData) return null;
                 const targetText = roomData.text;
-                
-                // 格式化時間 mm:ss
                 const mins = Math.floor(timeLeft / 60);
                 const secs = timeLeft % 60;
                 const timeString = `${mins}:${secs.toString().padStart(2, '0')}`;
-                
                 const isTimeLow = timeLeft <= 60;
 
                 return (
                     <div className="flex flex-col min-h-screen p-4 max-w-6xl mx-auto w-full relative">
-                        {/* Header Stats */}
                         <div className="flex flex-wrap justify-between items-center mb-6 bg-gray-900 border-b-2 border-yellow-400 p-4 rounded-t shadow-[0_4px_15px_rgba(255,232,31,0.2)] sticky top-0 z-20">
-                            <div className="text-2xl font-bold tracking-widest text-cyan-400">
-                                飛行員: {role === 'student' ? playerName : '指揮官(觀戰中)'}
-                            </div>
-                            <div className={`text-4xl font-black font-mono ${isTimeLow ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
-                                ⏳ {timeString}
-                            </div>
+                            <div className="text-2xl font-bold tracking-widest text-cyan-400">飛行員: {role === 'student' ? playerName : '指揮官(觀戰中)'}</div>
+                            <div className={`text-4xl font-black font-mono ${isTimeLow ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>⏳ {timeString}</div>
                             <div className="flex space-x-6 text-xl">
-                                <div className="flex flex-col items-center">
-                                    <span className="text-gray-400 text-sm">淨WPM</span>
-                                    <span className="text-green-400 font-bold">{stats.wpm}</span>
-                                </div>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-gray-400 text-sm">正確率</span>
-                                    <span className="text-blue-400 font-bold">{stats.accuracy}%</span>
-                                </div>
+                                <div className="flex flex-col items-center"><span className="text-gray-400 text-sm">淨WPM</span><span className="text-green-400 font-bold">{stats.wpm}</span></div>
+                                <div className="flex flex-col items-center"><span className="text-gray-400 text-sm">正確率</span><span className="text-blue-400 font-bold">{stats.accuracy}%</span></div>
                             </div>
                         </div>
 
                         {role === 'teacher' && (
                             <div className="text-center mb-4">
-                                <button onClick={endGame} className="border border-red-500 text-red-500 px-4 py-2 rounded hover:bg-red-500 hover:text-white transition">
-                                    強制結束測驗
-                                </button>
+                                <button onClick={endGame} className="border border-red-500 text-red-500 px-4 py-2 rounded hover:bg-red-500 hover:text-white transition">強制結束測驗</button>
                             </div>
                         )}
 
                         <div className="flex flex-col md:flex-row gap-6 relative">
-                            {/* Text Area */}
                             <div className="w-full md:w-3/4 relative" onClick={() => document.getElementById('typing-input')?.focus()}>
-                                {/* Invisible Input for handling typing & IME perfectly */}
                                 {role === 'student' && (
-                                    <textarea
-                                        id="typing-input"
-                                        className="hidden-textarea"
-                                        value={userInput}
-                                        onChange={handleTyping}
-                                        onPaste={e => e.preventDefault()}
-                                        autoFocus
-                                    />
+                                    <textarea id="typing-input" className="hidden-textarea" value={userInput} onChange={handleTyping} onPaste={e => e.preventDefault()} autoFocus />
                                 )}
-                                
                                 <div className="typing-container p-6 rounded-lg text-2xl leading-loose font-medium min-h-[50vh]">
                                     {targetText.split('').map((char, index) => {
                                         let className = 'char-untyped';
@@ -729,37 +608,27 @@
                                         return <span key={index} className={className}>{char}</span>;
                                     })}
                                 </div>
-                                
                                 {role === 'student' && (
-                                    <p className="text-gray-500 text-sm mt-4 text-center">
-                                        請直接開始打字。系統會自動將半形標點 `, . ! ? :` 轉換為全形 `， 。 ！ ？ ：`。
-                                    </p>
+                                    <p className="text-gray-500 text-sm mt-4 text-center">請直接開始打字。系統會自動將半形標點 `, . ! ? :` 轉換為全形 `， 。 ！ ？ ：`。</p>
                                 )}
                             </div>
 
-                            {/* Live Leaderboard (Sidebar) */}
                             <div className="w-full md:w-1/4 bg-gray-900 border border-gray-700 rounded-lg p-4 max-h-[60vh] overflow-y-auto">
                                 <h3 className="text-xl text-yellow-400 mb-3 border-b border-gray-700 pb-2 flex items-center justify-between">
-                                    <span>即時戰況</span>
-                                    <span className="text-xs text-gray-500">Live</span>
+                                    <span>即時戰況</span><span className="text-xs text-gray-500">Live</span>
                                 </h3>
                                 <div className="space-y-3">
                                     {players.map((p, idx) => {
                                         const percentage = Math.min(100, (p.progress / targetText.length) * 100);
-                                        const isMe = p.userId === user.uid;
+                                        const isMe = p.userId === user?.uid;
                                         return (
                                             <div key={p.userId} className={`p-2 rounded ${isMe ? 'bg-blue-900 bg-opacity-30 border border-blue-500' : 'bg-black'}`}>
                                                 <div className="flex justify-between text-sm mb-1">
-                                                    <span className={isMe ? 'text-blue-300 font-bold' : 'text-gray-300'}>
-                                                        {idx + 1}. {p.name} {p.status === 'finished' && '🏁'}
-                                                    </span>
+                                                    <span className={isMe ? 'text-blue-300 font-bold' : 'text-gray-300'}>{idx + 1}. {p.name} {p.status === 'finished' && '🏁'}</span>
                                                     <span className="text-green-400">{p.wpm} WPM</span>
                                                 </div>
                                                 <div className="w-full bg-gray-800 h-2 rounded overflow-hidden relative">
-                                                    <div 
-                                                        className={`h-full ${isMe ? 'bg-cyan-400 shadow-[0_0_10px_#00F0FF]' : 'bg-yellow-400'}`} 
-                                                        style={{ width: `${percentage}%`, transition: 'width 0.5s' }}
-                                                    ></div>
+                                                    <div className={`h-full ${isMe ? 'bg-cyan-400 shadow-[0_0_10px_#00F0FF]' : 'bg-yellow-400'}`} style={{ width: `${percentage}%`, transition: 'width 0.5s' }}></div>
                                                 </div>
                                             </div>
                                         );
@@ -772,8 +641,6 @@
             };
 
             const renderResults = () => {
-                const isComplete = userInput.length === (roomData?.text?.length || 0) || timeLeft === 0 || roomData?.status === 'finished';
-                
                 return (
                     <div className="flex flex-col items-center justify-center min-h-screen p-4 max-w-4xl mx-auto w-full">
                         <h2 className="text-5xl font-bold mb-8 sw-title">戰役結果</h2>
@@ -782,14 +649,8 @@
                             <div className="w-full bg-gray-900 border-2 border-cyan-400 rounded-lg p-6 mb-8 text-center saber-blue">
                                 <h3 className="text-2xl text-white mb-6">你的個人成績</h3>
                                 <div className="flex justify-around">
-                                    <div>
-                                        <div className="text-gray-400 text-lg">淨輸入速度</div>
-                                        <div className="text-5xl font-black text-cyan-400 mt-2">{stats.wpm} <span className="text-xl">WPM</span></div>
-                                    </div>
-                                    <div>
-                                        <div className="text-gray-400 text-lg">正確率</div>
-                                        <div className="text-5xl font-black text-green-400 mt-2">{stats.accuracy}<span className="text-xl">%</span></div>
-                                    </div>
+                                    <div><div className="text-gray-400 text-lg">淨輸入速度</div><div className="text-5xl font-black text-cyan-400 mt-2">{stats.wpm} <span className="text-xl">WPM</span></div></div>
+                                    <div><div className="text-gray-400 text-lg">正確率</div><div className="text-5xl font-black text-green-400 mt-2">{stats.accuracy}<span className="text-xl">%</span></div></div>
                                 </div>
                             </div>
                         )}
@@ -800,25 +661,17 @@
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="text-gray-400 border-b border-gray-800">
-                                            <th className="p-3">排名</th>
-                                            <th className="p-3">星際代號</th>
-                                            <th className="p-3 text-right">WPM</th>
-                                            <th className="p-3 text-right">正確率</th>
-                                            <th className="p-3 text-right">進度</th>
+                                            <th className="p-3">排名</th><th className="p-3">星際代號</th><th className="p-3 text-right">WPM</th><th className="p-3 text-right">正確率</th><th className="p-3 text-right">進度</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {players.map((p, idx) => (
                                             <tr key={p.userId} className={`border-b border-gray-900 hover:bg-gray-900 ${p.userId === user?.uid ? 'bg-blue-900 bg-opacity-20' : ''}`}>
-                                                <td className="p-3">
-                                                    {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
-                                                </td>
+                                                <td className="p-3">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</td>
                                                 <td className="p-3 font-bold text-white">{p.name}</td>
                                                 <td className="p-3 text-right text-green-400 font-mono">{p.wpm}</td>
                                                 <td className="p-3 text-right text-blue-400 font-mono">{p.accuracy}%</td>
-                                                <td className="p-3 text-right text-gray-400">
-                                                    {roomData ? Math.round((p.progress / roomData.text.length) * 100) : 0}%
-                                                </td>
+                                                <td className="p-3 text-right text-gray-400">{roomData ? Math.round((p.progress / roomData.text.length) * 100) : 0}%</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -826,7 +679,6 @@
                             </div>
                         </div>
 
-                        {/* 老師專屬的匯出按鈕 */}
                         {role === 'teacher' && (
                             <div className="mt-6 w-full text-center">
                                 <button onClick={uploadToSheet} className="bg-green-600 text-white font-bold px-8 py-3 rounded hover:bg-green-500 shadow-[0_0_15px_#22c55e] transition">
@@ -846,7 +698,23 @@
             }
 
             // 主渲染邏輯
-            if (view === 'loading') return <div className="min-h-screen flex items-center justify-center text-yellow-400 text-2xl font-mono animate-pulse">載入系統中...</div>;
+            if (view === 'loading') {
+                return (
+                    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+                        <div className="text-yellow-400 text-2xl font-mono animate-pulse mb-4">載入系統中...</div>
+                        {errorMessage && (
+                            <div className="bg-red-900 border border-red-500 text-white p-6 rounded-lg max-w-lg shadow-[0_0_15px_#ef4444]">
+                                <h3 className="font-bold mb-2 text-xl">⚠️ Firebase 連線被阻擋或設定錯誤</h3>
+                                <p className="mb-4 font-mono text-sm text-red-300">{errorMessage}</p>
+                                <ul className="list-disc pl-5 text-gray-200 text-sm space-y-2">
+                                    <li>請確認 Firebase 的 <b>Authentication -> 匿名登入</b> 已啟用。</li>
+                                    <li>如果您是在 GitHub 執行，請確認 <b>keelyw-11.github.io</b> 已加入 Firebase 的 Authorized domains (授權網域清單)。</li>
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
             if (view === 'home') return renderHome();
             if (view === 'teacher_setup') return renderTeacherSetup();
             if (view === 'student_join') return renderStudentJoin();
