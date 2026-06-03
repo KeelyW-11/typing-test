@@ -186,7 +186,7 @@
             const [playerName, setPlayerName] = useState('');
             const [errorMessage, setErrorMessage] = useState('');
 
-            // 遊戲中狀態
+            <!-- ... existing code ... -->
             const [userInput, setUserInput] = useState('');
             const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
             const [stats, setStats] = useState({ wpm: 0, accuracy: 0, correct: 0 });
@@ -197,14 +197,10 @@
                 
                 const initAuth = async () => {
                     try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await auth.signInWithCustomToken(__initial_auth_token);
-                        } else {
-                            await auth.signInAnonymously();
-                        }
+                        await auth.signInAnonymously();
                     } catch (error) {
                         console.error("Auth Error:", error);
-                        setErrorMessage("認證失敗，請重新整理頁面。");
+                        setErrorMessage(error.message);
                     }
                 };
                 
@@ -230,11 +226,31 @@
             }, []);
 
             // 監聽房間資料與所有玩家
-            useEffect(() => {
-                if (!user || !roomId) return;
+<!-- ... existing code ... -->
+            }
 
-                const roomsRef = db.collection('artifacts').doc(currentAppId).collection('public').doc('data').collection('SwTypingRooms');
-                const playersRef = db.collection('artifacts').doc(currentAppId).collection('public').doc('data').collection('SwTypingPlayers');
+            // 主渲染邏輯
+            if (view === 'loading') {
+                return (
+                    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+                        <div className="text-yellow-400 text-2xl font-mono animate-pulse mb-4">載入系統中...</div>
+                        {errorMessage && (
+                            <div className="bg-red-900 border border-red-500 text-white p-6 rounded-lg max-w-lg shadow-[0_0_15px_#ef4444]">
+                                <h3 className="font-bold mb-2 text-xl">⚠️ Firebase 連線被阻擋或設定錯誤</h3>
+                                <p className="mb-4 font-mono text-sm text-red-300">{errorMessage}</p>
+                                <ul className="list-disc pl-5 text-gray-200 text-sm space-y-2">
+                                    <li>請確認程式碼內的 <b>firebaseConfig</b> 已替換為您專案的真實金鑰。</li>
+                                    <li>請確認 Firebase 的 <b>Authentication -> 匿名登入</b> 已啟用。</li>
+                                    <li>請確認 <b>keelyw-11.github.io</b> 已加入 Firebase 的授權網域清單 (見下方說明)。</li>
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+            if (view === 'home') return renderHome();
+            if (view === 'teacher_setup') return renderTeacherSetup();
+<!-- ... existing code ... -->
 
                 // 監聽房間
                 const unsubscribeRoom = roomsRef.doc(roomId).onSnapshot(
