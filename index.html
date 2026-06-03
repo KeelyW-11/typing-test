@@ -439,15 +439,19 @@
             const handleKeyDown = (e) => {
                 if (view !== 'playing' || !roomData) return;
 
-                // 【核心機制】：判斷是否處於中文輸入法的「組字狀態」（底下有虛線）
-                // 學生在選字時按 Enter 不會觸發檢查，只有字確實打出來後按 Enter 才會送出檢查
-                if (e.nativeEvent.isComposing || e.keyCode === 229) {
-                    return; 
-                }
-
-                if (e.key === 'Enter') {
+                // 檢查是否按下 Enter 鍵（包含組字狀態下的 Enter，使用 e.code 判斷最準確）
+                if (e.key === 'Enter' || e.code === 'Enter' || e.code === 'NumpadEnter') {
                     e.preventDefault(); // 防止游標在輸入框裡換行
-                    validateText(e.target.value); 
+                    
+                    // 使用 setTimeout 等待 50 毫秒，確保瀏覽器已經完成選字並將中文字放入輸入框
+                    setTimeout(() => {
+                        const inputElement = document.getElementById('typing-input');
+                        if (inputElement) {
+                            validateText(inputElement.value);
+                        } else {
+                            validateText(e.target.value);
+                        }
+                    }, 50);
                 }
             };
 
@@ -660,6 +664,7 @@
                                             </span>
                                         </div>
                                         <textarea
+                                            id="typing-input"
                                             className="visible-textarea"
                                             value={userInput}
                                             onChange={handleTyping}
