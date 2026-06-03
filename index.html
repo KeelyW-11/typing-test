@@ -141,17 +141,20 @@
 
         const initFirebase = () => {
             if (!firebase.apps.length) {
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-                    // Fallback mock config for local testing if needed
-                    apiKey: "mock-key",
-                    authDomain: "mock-domain",
-                    projectId: "mock-project",
-                };
+                const firebaseConfig = {
+  apiKey: "AIzaSyBYY2Be5yo8C-Ml1ADrFBkV4TuR05uZnR4",
+  authDomain: "typing-test-374e8.firebaseapp.com",
+  projectId: "typing-test-374e8",
+  storageBucket: "typing-test-374e8.firebasestorage.app",
+  messagingSenderId: "83605792554",
+  appId: "1:83605792554:web:250e0396e8be8ce834e053"
+};
                 firebase.initializeApp(firebaseConfig);
             }
             db = firebase.firestore();
             auth = firebase.auth();
-            currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-starwars-typing-app';
+            // 自訂一個您的應用程式 ID
+            currentAppId = 'my-school-typing-game'; 
         };
 
         // --- 輔助函式 ---
