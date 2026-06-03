@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>星際打字大戰 - 中打競賽</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
     
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -24,12 +24,12 @@
             overflow-x: hidden;
         }
 
-        /* Starfield Background */
+        /* Starfield Background (URL encoded to prevent CSS parsing errors) */
         #stars {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             z-index: -1;
-            background: #000 url('data:image/svg+xml;utf8,<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="1" fill="white" opacity="0.8"/><circle cx="150" cy="50" r="1.5" fill="white" opacity="0.6"/><circle cx="80" cy="120" r="1" fill="white" opacity="0.9"/><circle cx="180" cy="180" r="2" fill="white" opacity="0.4"/><circle cx="50" cy="180" r="1" fill="white" opacity="0.7"/></svg>') repeat;
+            background: #000 url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='1' fill='white' opacity='0.8'/%3E%3Ccircle cx='150' cy='50' r='1.5' fill='white' opacity='0.6'/%3E%3Ccircle cx='80' cy='120' r='1' fill='white' opacity='0.9'/%3E%3Ccircle cx='180' cy='180' r='2' fill='white' opacity='0.4'/%3E%3Ccircle cx='50' cy='180' r='1' fill='white' opacity='0.7'/%3E%3C/svg%3E") repeat;
             animation: moveStars 100s linear infinite;
         }
 
@@ -83,29 +83,31 @@
             border: 1px solid #333;
         }
 
-        /* Hide actual textarea but keep it focusable and on top */
-        .hidden-textarea {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            opacity: 0;
-            z-index: 10;
-            cursor: text;
-            resize: none;
+        .visible-textarea {
+            width: 100%;
+            height: 250px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00F0FF;
+            color: #00F0FF;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 1.5rem;
+            line-height: 2;
+            resize: vertical;
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .visible-textarea:focus {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.6), inset 0 0 10px rgba(0, 240, 255, 0.2);
+            border-color: #FFE81F;
+            color: #fff;
         }
 
         .char-correct { color: #4ade80; text-shadow: 0 0 5px #4ade80; }
         .char-incorrect { color: #ef4444; text-shadow: 0 0 5px #ef4444; text-decoration: underline; }
         .char-untyped { color: #6b7280; }
-        .char-cursor { 
-            border-bottom: 2px solid #FFE81F; 
-            animation: blink 1s infinite;
-            background: rgba(255, 232, 31, 0.2);
-        }
-
-        @keyframes blink {
-            50% { border-color: transparent; background: transparent; }
-        }
 
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
@@ -116,9 +118,18 @@
 </head>
 <body>
     <div id="stars"></div>
-    <div id="root"></div>
+    
+    <!-- 加入防呆底層文字，如果 React 引擎成功啟動，這段文字會瞬間被覆蓋。如果一直看到這個畫面，代表瀏覽器阻擋了程式碼。 -->
+    <div id="root">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; color: #FFE81F; font-family: sans-serif;">
+            <h2 style="font-size: 2rem; margin-bottom: 1rem;">系統啟動中...</h2>
+            <p style="color: #888;">如果持續停留在此畫面，請按 <strong style="color: #fff;">Ctrl + F5</strong> 強制重新整理清除舊快取。</p>
+            <p style="color: #888;">或是您的網路環境可能阻擋了必要的腳本載入。</p>
+        </div>
+    </div>
 
-    <script type="text/babel">
+    <!-- 加上 data-presets 確保編譯器運作正常 -->
+    <script type="text/babel" data-presets="react,env">
         // --- 預設文章資料庫 ---
         const TEXTS = {
             mid: {
@@ -171,7 +182,7 @@
         };
 
         // --- React 應用程式 ---
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
         const App = () => {
             const [user, setUser] = useState(null);
@@ -187,6 +198,7 @@
 
             // 遊戲中狀態
             const [userInput, setUserInput] = useState('');
+            const [validatedInput, setValidatedInput] = useState('');
             const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
             const [stats, setStats] = useState({ wpm: 0, accuracy: 0, correct: 0 });
 
@@ -354,13 +366,14 @@
 
             const uploadToSheet = async () => {
                 try {
+                    const roomDiff = roomData && roomData.difficulty === 'mid' ? '中年級' : '高年級';
                     const payload = players.map(p => ({
                         roomId: p.roomId,
-                        difficulty: roomData?.difficulty === 'mid' ? '中年級' : '高年級',
+                        difficulty: roomDiff,
                         name: p.name,
                         wpm: p.wpm,
                         accuracy: p.accuracy,
-                        progress: roomData ? Math.round((p.progress / roomData.text.length) * 100) : 0
+                        progress: (roomData && roomData.text) ? Math.round((p.progress / roomData.text.length) * 100) : 0
                     }));
 
                     await fetch(APPS_SCRIPT_URL, {
@@ -386,7 +399,7 @@
                 
                 const syncInterval = setInterval(() => {
                     playerRef.update({
-                        progress: userInput.length,
+                        progress: validatedInput.length,
                         correct: stats.correct,
                         wpm: stats.wpm,
                         accuracy: stats.accuracy,
@@ -395,7 +408,7 @@
                 }, 2000);
 
                 return () => clearInterval(syncInterval);
-            }, [view, userInput, stats, role]);
+            }, [view, validatedInput, stats, role]);
 
             useEffect(() => {
                 if (view !== 'playing') return;
@@ -417,14 +430,27 @@
 
             const handleTyping = (e) => {
                 if (view !== 'playing' || !roomData) return;
-                let val = e.target.value;
-                val = convertToFullWidthPunctuation(val);
+                setUserInput(e.target.value);
+            };
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // 防止游標換行
+                    validateText(userInput);
+                }
+            };
+
+            const validateText = (rawText) => {
+                if (view !== 'playing' || !roomData) return;
+                
+                let val = convertToFullWidthPunctuation(rawText);
                 
                 if (val.length > roomData.text.length) {
                     val = val.substring(0, roomData.text.length);
                 }
 
                 setUserInput(val);
+                setValidatedInput(val);
 
                 const targetText = roomData.text;
                 let correctCount = 0;
@@ -592,24 +618,43 @@
                         )}
 
                         <div className="flex flex-col md:flex-row gap-6 relative">
-                            <div className="w-full md:w-3/4 relative" onClick={() => document.getElementById('typing-input')?.focus()}>
-                                {role === 'student' && (
-                                    <textarea id="typing-input" className="hidden-textarea" value={userInput} onChange={handleTyping} onPaste={e => e.preventDefault()} autoFocus />
-                                )}
-                                <div className="typing-container p-6 rounded-lg text-2xl leading-loose font-medium min-h-[50vh]">
-                                    {targetText.split('').map((char, index) => {
-                                        let className = 'char-untyped';
-                                        if (index < userInput.length) {
-                                            className = userInput[index] === char ? 'char-correct' : 'char-incorrect';
-                                        }
-                                        if (index === userInput.length && role === 'student') {
-                                            className += ' char-cursor';
-                                        }
-                                        return <span key={index} className={className}>{char}</span>;
-                                    })}
+                            <div className="w-full md:w-3/4 flex flex-col gap-4">
+                                {/* Target Text Display */}
+                                <div className="relative">
+                                    <div className="absolute top-0 left-0 bg-yellow-400 text-black text-xs font-bold px-3 py-1 rounded-br-lg rounded-tl-lg z-10 shadow-md">
+                                        作戰目標 (比對結果)
+                                    </div>
+                                    <div className="typing-container p-6 pt-10 rounded-lg text-2xl leading-loose font-medium min-h-[30vh]">
+                                        {targetText.split('').map((char, index) => {
+                                            let className = 'char-untyped';
+                                            if (index < validatedInput.length) {
+                                                className = validatedInput[index] === char ? 'char-correct' : 'char-incorrect';
+                                            }
+                                            return <span key={index} className={className}>{char}</span>;
+                                        })}
+                                    </div>
                                 </div>
+                                
+                                {/* Visible User Input */}
                                 {role === 'student' && (
-                                    <p className="text-gray-500 text-sm mt-4 text-center">請直接開始打字。系統會自動將半形標點 `, . ! ? :` 轉換為全形 `， 。 ！ ？ ：`。</p>
+                                    <div className="relative flex flex-col gap-2">
+                                        <div className="flex justify-between items-end mb-1">
+                                            <label className="text-cyan-400 font-bold text-lg">你的輸入終端機：</label>
+                                            <span className="text-yellow-400 text-sm animate-pulse font-bold bg-black bg-opacity-50 px-2 py-1 rounded border border-yellow-400">👉 輸入告一段落後，請按 Enter 鍵送出檢查！</span>
+                                        </div>
+                                        <textarea
+                                            className="visible-textarea"
+                                            value={userInput}
+                                            onChange={handleTyping}
+                                            onKeyDown={handleKeyDown}
+                                            onPaste={e => e.preventDefault()}
+                                            autoFocus
+                                            placeholder="在此輸入文章... 遇到錯字可隨時刪除或使用輸入法選字。"
+                                        />
+                                        <p className="text-gray-500 text-sm text-center mt-2">
+                                            系統會自動將半形標點 `, . ! ? :` 轉換為全形 `， 。 ！ ？ ：`
+                                        </p>
+                                    </div>
                                 )}
                             </div>
 
@@ -620,7 +665,8 @@
                                 <div className="space-y-3">
                                     {players.map((p, idx) => {
                                         const percentage = Math.min(100, (p.progress / targetText.length) * 100);
-                                        const isMe = p.userId === user?.uid;
+                                        const currentUid = user ? user.uid : null;
+                                        const isMe = p.userId === currentUid;
                                         return (
                                             <div key={p.userId} className={`p-2 rounded ${isMe ? 'bg-blue-900 bg-opacity-30 border border-blue-500' : 'bg-black'}`}>
                                                 <div className="flex justify-between text-sm mb-1">
@@ -665,15 +711,19 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {players.map((p, idx) => (
-                                            <tr key={p.userId} className={`border-b border-gray-900 hover:bg-gray-900 ${p.userId === user?.uid ? 'bg-blue-900 bg-opacity-20' : ''}`}>
-                                                <td className="p-3">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</td>
-                                                <td className="p-3 font-bold text-white">{p.name}</td>
-                                                <td className="p-3 text-right text-green-400 font-mono">{p.wpm}</td>
-                                                <td className="p-3 text-right text-blue-400 font-mono">{p.accuracy}%</td>
-                                                <td className="p-3 text-right text-gray-400">{roomData ? Math.round((p.progress / roomData.text.length) * 100) : 0}%</td>
-                                            </tr>
-                                        ))}
+                                        {players.map((p, idx) => {
+                                            const currentUid = user ? user.uid : null;
+                                            const rowClass = 'border-b border-gray-900 hover:bg-gray-900 ' + (p.userId === currentUid ? 'bg-blue-900 bg-opacity-20' : '');
+                                            return (
+                                                <tr key={p.userId} className={rowClass}>
+                                                    <td className="p-3">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</td>
+                                                    <td className="p-3 font-bold text-white">{p.name}</td>
+                                                    <td className="p-3 text-right text-green-400 font-mono">{p.wpm}</td>
+                                                    <td className="p-3 text-right text-blue-400 font-mono">{p.accuracy}%</td>
+                                                    <td className="p-3 text-right text-gray-400">{(roomData && roomData.text) ? Math.round((p.progress / roomData.text.length) * 100) : 0}%</td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -703,7 +753,7 @@
                     <div className="min-h-screen flex flex-col items-center justify-center p-4">
                         <div className="text-yellow-400 text-2xl font-mono animate-pulse mb-4">載入系統中...</div>
                         {errorMessage && (
-                            <div className="bg-red-900 border border-red-500 text-white p-6 rounded-lg max-w-lg shadow-[0_0_15px_#ef4444]">
+                            <div className="bg-red-900 border border-red-500 text-white p-6 rounded-lg max-w-lg shadow-[0_0_15px_#ef4444] text-left">
                                 <h3 className="font-bold mb-2 text-xl">⚠️ Firebase 連線被阻擋或設定錯誤</h3>
                                 <p className="mb-4 font-mono text-sm text-red-300">{errorMessage}</p>
                                 <ul className="list-disc pl-5 text-gray-200 text-sm space-y-2">
